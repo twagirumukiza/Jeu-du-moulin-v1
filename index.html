@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Le Jeu du Moulin</title>
+    <title>Le Jeu du Moulin - Édition Avancée</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -71,7 +71,6 @@
             text-align: center;
         }
 
-        /* Screens */
         .screen {
             display: none;
             width: 100%;
@@ -83,7 +82,6 @@
             display: flex;
         }
 
-        /* Menu Styling */
         .menu-btn, .btn {
             background-color: var(--accent-color);
             color: #fff;
@@ -104,7 +102,6 @@
             transform: translateY(-2px);
         }
 
-        /* Settings & Options */
         .settings-group {
             margin: 15px 0;
             width: 100%;
@@ -128,7 +125,6 @@
             font-size: 1rem;
         }
 
-        /* Game HUD */
         .hud {
             display: flex;
             justify-content: space-between;
@@ -158,7 +154,6 @@
             color: var(--accent-color);
         }
 
-        /* Board Canvas/SVG */
         .board-container {
             position: relative;
             width: 100%;
@@ -243,16 +238,16 @@
 
         <!-- MENU PRINCIPAL -->
         <div id="main-menu" class="screen active">
-            <button class="menu-btn" onclick="showScreen('mode-menu')">Jouer</button>
-            <button class="menu-btn" onclick="showScreen('settings-menu')">Paramètres</button>
+            <button class="menu-btn" onclick="playSound('click'); showScreen('mode-menu')">Jouer</button>
+            <button class="menu-btn" onclick="playSound('click'); showScreen('settings-menu')">Paramètres</button>
         </div>
 
         <!-- MENU MODE DE JEU -->
         <div id="mode-menu" class="screen">
-            <button class="menu-btn" onclick="startGame('ai')">Solo contre l'IA</button>
-            <button class="menu-btn" onclick="startGame('local')">Deux joueurs (Local)</button>
-            <button class="menu-btn" onclick="startGame('multi')">Multijoueur (Simulé)</button>
-            <button class="menu-btn" style="background:#555;" onclick="showScreen('main-menu')">Retour</button>
+            <button class="menu-btn" onclick="playSound('click'); startGame('ai')">Solo contre l'IA</button>
+            <button class="menu-btn" onclick="playSound('click'); startGame('local')">Deux joueurs (Local)</button>
+            <button class="menu-btn" onclick="playSound('click'); startGame('multi')">Multijoueur (Simulé)</button>
+            <button class="menu-btn" style="background:#555;" onclick="playSound('click'); showScreen('main-menu')">Retour</button>
         </div>
 
         <!-- MENU PARAMÈTRES -->
@@ -269,8 +264,8 @@
             <div class="settings-group">
                 <label for="setting-variant">Variante du plateau</label>
                 <select id="setting-variant" onchange="updateSetting('variant', this.value)">
-                    <option value="standard" selected>Sans diagonales (9 pions)</option>
-                    <option value="diagonals">Avec diagonales (12 pions)</option>
+                    <option value="standard" selected>Standard (9 pions, sans diagonales)</option>
+                    <option value="diagonals">Diagonales & Point Central (12 pions)</option>
                 </select>
             </div>
 
@@ -290,7 +285,7 @@
                 </select>
             </div>
 
-            <button class="menu-btn" style="margin-top: 20px;" onclick="showScreen('main-menu')">Sauvegarder & Retour</button>
+            <button class="menu-btn" style="margin-top: 20px;" onclick="playSound('click'); showScreen('main-menu')">Sauvegarder & Retour</button>
         </div>
 
         <!-- ÉCRAN DE JEU -->
@@ -304,19 +299,84 @@
 
             <div class="board-container">
                 <svg id="board-svg" viewBox="0 0 600 600" onclick="handleBoardClick(event)">
-                    <!-- Les lignes et nœuds seront générés dynamiquement par JS -->
+                    <!-- Généré dynamiquement par JS -->
                 </svg>
             </div>
 
             <div class="controls-row">
-                <button class="btn" style="background:#e74c3c;" onclick="showScreen('main-menu')">Quitter</button>
-                <button class="btn" onclick="resetGame()">Recommencer</button>
+                <button class="btn" style="background:#e74c3c;" onclick="playSound('click'); showScreen('main-menu')">Quitter</button>
+                <button class="btn" onclick="playSound('click'); resetGame()">Recommencer</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION ET ÉTAT DU JEU ---
+        // --- SYSTÈME AUDIO (WEB AUDIO API) ---
+        let audioCtx = null;
+        function playSound(type) {
+            if (settings.music !== 'on') return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+                    osc.start(now);
+                    osc.stop(now + 0.04);
+                } else if (type === 'place') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(250, now);
+                    osc.frequency.exponentialRampToValueAtTime(480, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'move') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(380, now + 0.08);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'mill') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.08);
+                    osc.frequency.setValueAtTime(783.99, now + 0.16);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554.37, now + 0.12);
+                    osc.frequency.setValueAtTime(659.25, now + 0.24);
+                    osc.frequency.setValueAtTime(880, now + 0.36);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // --- CONFIGURATION ET ÉTAT ---
         const settings = {
             difficulty: 'medium',
             variant: 'standard',
@@ -325,9 +385,9 @@
         };
 
         let gameState = {
-            mode: 'local', // 'ai', 'local', 'multi'
-            turn: 1, // 1 ou 2
-            phase: 1, // 1: Placement, 2: Déplacement / Vol
+            mode: 'local',
+            turn: 1,
+            phase: 1,
             maxPieces: 9,
             p1Reserve: 9,
             p2Reserve: 9,
@@ -335,12 +395,11 @@
             p2OnBoard: 0,
             selectedNode: null,
             removingPiece: false,
-            board: Array(24).fill(0), // 0: vide, 1: J1, 2: J2
+            board: [],
             gameOver: false
         };
 
-        // --- DÉFINITION DES NŒUDS ET GRPAPHE (24 positions) ---
-        // Coordonnées X, Y sur une grille 600x600
+        // Coordonnées des 25 nœuds (0 à 23 pour les 3 carrés, 24 pour le point central)
         const nodeCoords = [
             // Carré extérieur (0-7)
             {x: 50, y: 50},   {x: 300, y: 50},  {x: 550, y: 50},
@@ -353,82 +412,85 @@
             // Carré intérieur (16-23)
             {x: 200, y: 200}, {x: 300, y: 200}, {x: 400, y: 200},
             {x: 400, y: 300}, {x: 400, y: 400}, {x: 300, y: 400},
-            {x: 200, y: 400}, {x: 200, y: 300}
+            {x: 200, y: 400}, {x: 200, y: 300},
+            // Point Central (24)
+            {x: 300, y: 300}
         ];
 
-        // Adjacences standards (orthogonales)
+        // Connexions orthogonales de base
         const baseAdjacencies = {
             0: [1, 7], 1: [0, 2, 9], 2: [1, 3], 3: [2, 4, 11], 4: [3, 5], 5: [4, 6, 13], 6: [5, 7], 7: [0, 6, 15],
             8: [9, 15], 9: [8, 10, 1, 17], 10: [9, 11], 11: [10, 12, 3, 19], 12: [11, 13], 13: [12, 14, 5, 21], 14: [13, 15], 15: [8, 14, 7, 23],
-            16: [17, 23], 17: [16, 18, 9], 18: [17, 19], 19: [18, 20, 11], 20: [19, 21], 21: [20, 22, 13], 22: [21, 23], 23: [16, 22, 15]
+            16: [17, 23], 17: [16, 18, 9], 18: [17, 19], 19: [18, 20, 11], 20: [19, 21], 21: [20, 22, 13], 22: [21, 23], 23: [16, 22, 15],
+            24: [] // Rempli dynamiquement si variante active
         };
 
-        // Diagonales additionnelles (variante)
-        const diagonalAdjacencies = {
-            1: [17], 17: [1],
-            3: [19], 19: [3],
-            5: [21], 21: [5],
-            7: [23], 23: [7]
-        };
-
-        // Moulins possibles (lignes de 3)
-        const mills = [
-            // Extérieur
+        const standardMills = [
             [0, 1, 2], [2, 3, 4], [4, 5, 6], [6, 7, 0],
-            // Milieu
             [8, 9, 10], [10, 11, 12], [12, 13, 14], [14, 15, 8],
-            // Intérieur
             [16, 17, 18], [18, 19, 20], [20, 21, 22], [22, 23, 16],
-            // Connexions perpendiculaires
             [1, 9, 17], [3, 11, 19], [5, 13, 21], [7, 15, 23]
         ];
 
-        // Ajout des moulins diagonaux si variante active
         const diagonalMills = [
-            [0, 8, 16], [2, 10, 18], [4, 12, 20], [6, 14, 22]
+            [0, 8, 16], [4, 12, 20],
+            [2, 10, 18], [6, 14, 22],
+            [16, 24, 20], [18, 24, 22]
         ];
 
         function getActiveMills() {
             if (settings.variant === 'diagonals') {
-                return [...mills, ...diagonalMills];
+                return [...standardMills, ...diagonalMills];
             }
-            return mills;
+            return standardMills;
         }
 
         function getAdjacencies() {
             let adj = JSON.parse(JSON.stringify(baseAdjacencies));
             if (settings.variant === 'diagonals') {
-                for (let k in diagonalAdjacencies) {
-                    diagonalAdjacencies[k].forEach(target => {
-                        if (!adj[k].includes(target)) adj[k].push(target);
-                    });
-                }
+                // Diagonales extérieures et intermédiaires
+                const diagPairs = [
+                    [0, 8], [8, 16],
+                    [2, 10], [10, 18],
+                    [4, 12], [12, 20],
+                    [6, 14], [14, 22]
+                ];
+                diagPairs.forEach(([a, b]) => {
+                    if (!adj[a].includes(b)) adj[a].push(b);
+                    if (!adj[b].includes(a)) adj[b].push(a);
+                });
+                // Connexions du point central (24) aux coins intérieurs (16, 18, 20, 22)
+                adj[24] = [16, 18, 20, 22];
+                [16, 18, 20, 22].forEach(n => {
+                    if (!adj[n].includes(24)) adj[n].push(24);
+                });
             }
             return adj;
         }
 
-        // --- GESTION DES ÉCRANS ---
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
         }
 
         function updateSetting(key, value) {
+            playSound('click');
             settings[key] = value;
             if (key === 'theme') {
                 document.documentElement.setAttribute('data-theme', value);
             }
         }
 
-        // --- INITIALISATION DU JEU ---
         function startGame(mode) {
             gameState.mode = mode;
             gameState.maxPieces = (settings.variant === 'diagonals') ? 12 : 9;
+            const numNodes = (settings.variant === 'diagonals') ? 25 : 24;
+            
             gameState.p1Reserve = gameState.maxPieces;
             gameState.p2Reserve = gameState.maxPieces;
             gameState.p1OnBoard = 0;
             gameState.p2OnBoard = 0;
-            gameState.board = Array(24).fill(0);
+            gameState.board = Array(numNodes).fill(0);
             gameState.turn = 1;
             gameState.phase = 1;
             gameState.selectedNode = null;
@@ -444,44 +506,51 @@
             startGame(gameState.mode);
         }
 
-        // --- RENDU GRAPHIQUE SVG ---
         function renderBoard() {
             const svg = document.getElementById('board-svg');
             let html = '';
 
-            // Lignes du plateau standard
+            // Lignes standard orthogonales
             const lines = [
-                [0,2], [2,4], [4,6], [6,0], // Extérieur
-                [8,10], [10,12], [12,14], [14,8], // Milieu
-                [16,18], [18,20], [20,22], [22,16], // Intérieur
-                [1,17], [3,19], [5,21], [7,23] // Connexions
+                [0,2], [2,4], [4,6], [6,0],
+                [8,10], [10,12], [12,14], [14,8],
+                [16,18], [18,20], [20,22], [22,16],
+                [1,17], [3,19], [5,21], [7,23]
             ];
 
             lines.forEach(l => {
                 html += `<line x1="${nodeCoords[l[0]].x}" y1="${nodeCoords[l[0]].y}" x2="${nodeCoords[l[1]].x}" y2="${nodeCoords[l[1]].y}" class="board-line" />`;
             });
 
-            // Lignes diagonales si activées
+            // Lignes diagonales et centre si variante active
             if (settings.variant === 'diagonals') {
-                const diagLines = [[0,16], [2,18], [4,20], [6,22]];
+                const diagLines = [
+                    [0, 8], [8, 16],
+                    [2, 10], [10, 18],
+                    [4, 12], [12, 20],
+                    [6, 14], [14, 22],
+                    [16, 24], [20, 24],
+                    [18, 24], [22, 24]
+                ];
                 diagLines.forEach(l => {
-                    html += `<line x1="${nodeCoords[l[0]].x}" y1="${nodeCoords[l[0]].y}" x2="${nodeCoords[l[1]].x}" y2="${nodeCoords[l[1]].y}" class="board-line" stroke-dasharray="5,5" />`;
+                    html += `<line x1="${nodeCoords[l[0]].x}" y1="${nodeCoords[l[0]].y}" x2="${nodeCoords[l[1]].x}" y2="${nodeCoords[l[1]].y}" class="board-line" stroke-dasharray="4,4" />`;
                 });
             }
 
-            // Nœuds et pions
-            nodeCoords.forEach((coord, idx) => {
-                let highlightClass = '';
-                if (gameState.selectedNode === idx) highlightClass = 'highlight';
+            // Rendu des nœuds et pions (0 à 23 ou 24)
+            const numNodes = (settings.variant === 'diagonals') ? 25 : 24;
+            for (let idx = 0; idx < numNodes; idx++) {
+                const coord = nodeCoords[idx];
+                let highlightClass = (gameState.selectedNode === idx) ? 'highlight' : '';
 
-                html += `<circle cx="${coord.x}" cy="${coord.y}" r="14" class="node ${highlightClass}" data-index="${idx}" />`;
+                html += `<circle cx="${coord.x}" cy="${coord.y}" r="13" class="node ${highlightClass}" data-index="${idx}" />`;
 
                 if (gameState.board[idx] === 1) {
-                    html += `<circle cx="${coord.x}" cy="${coord.y}" r="11" class="piece p1 ${gameState.selectedNode === idx ? 'selected' : ''}" data-index="${idx}" />`;
+                    html += `<circle cx="${coord.x}" cy="${coord.y}" r="10" class="piece p1 ${gameState.selectedNode === idx ? 'selected' : ''}" data-index="${idx}" />`;
                 } else if (gameState.board[idx] === 2) {
-                    html += `<circle cx="${coord.x}" cy="${coord.y}" r="11" class="piece p2 ${gameState.selectedNode === idx ? 'selected' : ''}" data-index="${idx}" />`;
+                    html += `<circle cx="${coord.x}" cy="${coord.y}" r="10" class="piece p2 ${gameState.selectedNode === idx ? 'selected' : ''}" data-index="${idx}" />`;
                 }
-            });
+            }
 
             svg.innerHTML = html;
         }
@@ -507,7 +576,6 @@
             }
         }
 
-        // --- LOGIQUE DE JEU ---
         function handleBoardClick(event) {
             if (gameState.gameOver) return;
             const target = event.target.closest('[data-index]');
@@ -534,9 +602,11 @@
                 gameState.board[idx] = gameState.turn;
                 gameState[reserveKey]--;
                 gameState[boardKey]++;
+                playSound('place');
 
                 if (checkMill(idx, gameState.turn)) {
                     gameState.removingPiece = true;
+                    playSound('mill');
                 } else {
                     nextTurn();
                 }
@@ -558,22 +628,23 @@
             const canFly = totalOnBoard === 3;
 
             if (gameState.selectedNode === null) {
-                // Sélectionner son propre pion
                 if (gameState.board[idx] === player) {
                     gameState.selectedNode = idx;
+                    playSound('click');
                     renderBoard();
                 }
             } else {
-                // Déplacer vers une case vide
                 if (gameState.board[idx] === 0) {
                     const isValidMove = canFly || adj[gameState.selectedNode].includes(idx);
                     if (isValidMove) {
                         gameState.board[gameState.selectedNode] = 0;
                         gameState.board[idx] = player;
                         gameState.selectedNode = null;
+                        playSound('move');
 
                         if (checkMill(idx, player)) {
                             gameState.removingPiece = true;
+                            playSound('mill');
                         } else {
                             nextTurn();
                         }
@@ -590,8 +661,8 @@
                         renderBoard();
                     }
                 } else if (gameState.board[idx] === player) {
-                    // Changer de sélection
                     gameState.selectedNode = idx;
+                    playSound('click');
                     renderBoard();
                 } else {
                     gameState.selectedNode = null;
@@ -603,7 +674,6 @@
         function removePiece(idx) {
             const opponent = gameState.turn === 1 ? 2 : 1;
             if (gameState.board[idx] === opponent) {
-                // Règle: Ne pas supprimer un pion faisant partie d'un moulin adverse sauf si tous le sont
                 if (isInMill(idx, opponent) && !allPiecesInMill(opponent)) {
                     alert("Ce pion fait partie d'un moulin ! Choisissez-en un autre.");
                     return;
@@ -614,6 +684,7 @@
                 else gameState.p2OnBoard--;
 
                 gameState.removingPiece = false;
+                playSound('click');
                 checkGameOver();
                 
                 if (!gameState.gameOver) {
@@ -640,7 +711,11 @@
         }
 
         function allPiecesInMill(player) {
-            const playerIndices = gameState.board.map((val, idx) => val === player ? idx : -1).filter(val => val !== -1);
+            const numNodes = (settings.variant === 'diagonals') ? 25 : 24;
+            const playerIndices = [];
+            for(let i=0; i<numNodes; i++) {
+                if(gameState.board[i] === player) playerIndices.push(i);
+            }
             return playerIndices.every(idx => isInMill(idx, player));
         }
 
@@ -659,22 +734,10 @@
             const p2Total = gameState.p2Reserve + gameState.p2OnBoard;
 
             if (gameState.phase === 2) {
-                if (p1Total < 3) {
-                    endGame(2);
-                    return;
-                }
-                if (p2Total < 3) {
-                    endGame(1);
-                    return;
-                }
-                if (isPlayerBlocked(1)) {
-                    endGame(2);
-                    return;
-                }
-                if (isPlayerBlocked(2)) {
-                    endGame(1);
-                    return;
-                }
+                if (p1Total < 3) { endGame(2); return; }
+                if (p2Total < 3) { endGame(1); return; }
+                if (isPlayerBlocked(1)) { endGame(2); return; }
+                if (isPlayerBlocked(2)) { endGame(1); return; }
             }
         }
 
@@ -682,10 +745,11 @@
             if (player === 1 && gameState.p1Reserve > 0) return false;
             if (player === 2 && gameState.p2Reserve > 0) return false;
             const adj = getAdjacencies();
-            for (let i = 0; i < 24; i++) {
+            const numNodes = (settings.variant === 'diagonals') ? 25 : 24;
+            for (let i = 0; i < numNodes; i++) {
                 if (gameState.board[i] === player) {
                     const totalOnBoard = player === 1 ? gameState.p1OnBoard : gameState.p2OnBoard;
-                    if (totalOnBoard === 3) return false; // Peut voler
+                    if (totalOnBoard === 3) return false;
                     const hasMove = adj[i].some(neighbor => gameState.board[neighbor] === 0);
                     if (hasMove) return false;
                 }
@@ -695,16 +759,18 @@
 
         function endGame(winner) {
             gameState.gameOver = true;
+            playSound('win');
             document.getElementById('status-message').innerText = `🎉 Le Joueur ${winner} a gagné la partie !`;
         }
 
-        // --- INTELLIGENCE ARTIFICIELLE (IA) ---
+        // --- INTELLIGENCE ARTIFICIELLE ---
         function aiTurn() {
             if (gameState.gameOver) return;
 
             if (gameState.removingPiece) {
-                // Trouver un pion adverse à enlever
-                const p1Pieces = gameState.board.map((v, i) => v === 1 ? i : -1).filter(i => i !== -1);
+                const numNodes = (settings.variant === 'diagonals') ? 25 : 24;
+                const p1Pieces = [];
+                for(let i=0; i<numNodes; i++) { if(gameState.board[i] === 1) p1Pieces.push(i); }
                 const removable = p1Pieces.filter(i => !isInMill(i, 1) || allPiecesInMill(1));
                 const target = removable.length > 0 ? removable[0] : p1Pieces[0];
                 if (target !== undefined) removePiece(target);
@@ -712,14 +778,13 @@
             }
 
             if (gameState.phase === 1) {
-                // Phase 1 : Poser un pion (IA)
-                const emptySpots = gameState.board.map((v, i) => v === 0 ? i : -1).filter(i => i !== -1);
+                const numNodes = (settings.variant === 'diagonals') ? 25 : 24;
+                const emptySpots = [];
+                for(let i=0; i<numNodes; i++) { if(gameState.board[i] === 0) emptySpots.push(i); }
                 if (emptySpots.length === 0) return;
 
-                // Stratégie basique / intermédiaire / avancée
                 let chosenSpot = emptySpots[Math.floor(Math.random() * emptySpots.length)];
                 if (settings.difficulty !== 'easy') {
-                    // Chercher à faire un moulin ou bloquer J1
                     for (let spot of emptySpots) {
                         gameState.board[spot] = 2;
                         if (checkMill(spot, 2)) {
@@ -734,9 +799,11 @@
                 gameState.board[chosenSpot] = 2;
                 gameState.p2Reserve--;
                 gameState.p2OnBoard++;
+                playSound('place');
 
                 if (checkMill(chosenSpot, 2)) {
                     gameState.removingPiece = true;
+                    playSound('mill');
                 } else {
                     nextTurn();
                 }
@@ -749,15 +816,16 @@
                     setTimeout(aiTurn, 600);
                 }
             } else {
-                // Phase 2 : Déplacer un pion (IA)
                 const adj = getAdjacencies();
-                const aiPieces = gameState.board.map((v, i) => v === 2 ? i : -1).filter(i => i !== -1);
+                const numNodes = (settings.variant === 'diagonals') ? 25 : 24;
+                const aiPieces = [];
+                for(let i=0; i<numNodes; i++) { if(gameState.board[i] === 2) aiPieces.push(i); }
                 const canFly = gameState.p2OnBoard === 3;
 
                 let possibleMoves = [];
                 aiPieces.forEach(from => {
                     const destinations = canFly 
-                        ? gameState.board.map((v, i) => v === 0 ? i : -1).filter(i => i !== -1)
+                        ? (() => { let emp=[]; for(let i=0; i<numNodes; i++) if(gameState.board[i]===0) emp.push(i); return emp; })()
                         : adj[from].filter(to => gameState.board[to] === 0);
                     
                     destinations.forEach(to => {
@@ -767,7 +835,6 @@
 
                 if (possibleMoves.length === 0) return;
 
-                // Choisir un mouvement (priorité aux moulins)
                 let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
                 if (settings.difficulty !== 'easy') {
                     for (let move of possibleMoves) {
@@ -786,9 +853,11 @@
 
                 gameState.board[bestMove.from] = 0;
                 gameState.board[bestMove.to] = 2;
+                playSound('move');
 
                 if (checkMill(bestMove.to, 2)) {
                     gameState.removingPiece = true;
+                    playSound('mill');
                 } else {
                     nextTurn();
                 }
